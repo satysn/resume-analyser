@@ -3,20 +3,12 @@ import re
 import spacy
 from spacy.matcher import PhraseMatcher
 import streamlit as st
-import os
 
-# --- SETUP ---
 @st.cache_resource
 def load_nlp():
-    # This tries to download it only if it's missing
-    try:
-        return spacy.load("en_core_web_sm")
-    except:
-        os.system("python -m spacy download en_core_web_sm")
-        return spacy.load("en_core_web_sm")
+    return spacy.load("en_core_web_sm")
 
 nlp = load_nlp()
-
 # --- DATA: Expanded Role Library ---
 SAMPLE_JDS = {
     "Python Developer": ["Python", "Django", "Flask", "SQL", "Git", "REST API", "Docker", "Unit Testing"],
