@@ -3,14 +3,20 @@ import re
 import spacy
 from spacy.matcher import PhraseMatcher
 import streamlit as st
+import subprocess
+import sys
 
 # --- SETUP ---
-# We try to load the model directly. Streamlit will have installed it 
-# because of the link we put in requirements.txt
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    st.error("NLP Model not found. Please wait for the app to finish installing dependencies.")
+@st.cache_resource # This makes the app load much faster after the first time
+def load_nlp():
+    try:
+        return spacy.load("en_core_web_sm")
+    except OSError:
+        # If the model isn't there, we download it manually
+        subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+        return spacy.load("en_core_web_sm")
+
+nlp = load_nlp()
 
 # --- DATA: Expanded Role Library ---
 SAMPLE_JDS = {
