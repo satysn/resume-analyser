@@ -5,12 +5,12 @@ from spacy.matcher import PhraseMatcher
 import streamlit as st
 
 # --- SETUP ---
+# We try to load the model directly. Streamlit will have installed it 
+# because of the link we put in requirements.txt
 try:
     nlp = spacy.load("en_core_web_sm")
 except:
-    import os
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+    st.error("NLP Model not found. Please wait for the app to finish installing dependencies.")
 
 # --- DATA: Expanded Role Library ---
 SAMPLE_JDS = {
