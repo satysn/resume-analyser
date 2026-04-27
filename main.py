@@ -4,6 +4,7 @@ import spacy
 from spacy.matcher import PhraseMatcher
 import streamlit as st
 
+# --- SETUP ---
 @st.cache_resource
 def load_nlp():
     return spacy.load("en_core_web_sm")
