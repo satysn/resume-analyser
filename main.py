@@ -3,17 +3,19 @@ import re
 import spacy
 from spacy.matcher import PhraseMatcher
 import streamlit as st
+import os
 
 # --- SETUP ---
 @st.cache_resource
 def load_nlp():
-    return spacy.load("en_core_web_sm")
+    # This tries to download it only if it's missing
+    try:
+        return spacy.load("en_core_web_sm")
+    except:
+        os.system("python -m spacy download en_core_web_sm")
+        return spacy.load("en_core_web_sm")
 
-try:
-    nlp = load_nlp()
-except OSError:
-    st.error("NLP model not found. Check that your requirements.txt includes the spaCy model wheel URL.")
-    st.stop()
+nlp = load_nlp()
 
 # --- DATA: Expanded Role Library ---
 SAMPLE_JDS = {
