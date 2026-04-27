@@ -3,17 +3,16 @@ import re
 import spacy
 from spacy.matcher import PhraseMatcher
 import streamlit as st
-import subprocess
-import sys
+import os
 
 # --- SETUP ---
-@st.cache_resource # This makes the app load much faster after the first time
+@st.cache_resource
 def load_nlp():
+    # This tries to download it only if it's missing
     try:
         return spacy.load("en_core_web_sm")
-    except OSError:
-        # If the model isn't there, we download it manually
-        subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+    except:
+        os.system("python -m spacy download en_core_web_sm")
         return spacy.load("en_core_web_sm")
 
 nlp = load_nlp()
