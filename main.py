@@ -125,6 +125,15 @@ def get_ai_feedback(resume_text, matched, missing, role, score):
         return "⚠️ AI Feedback is currently unavailable. Please configure the API Key in Streamlit Secrets."
     
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+    import google.generativeai as genai
+import streamlit as st
+
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+for m in genai.list_models():
+    if "generateContent" in m.supported_generation_methods:
+        st.write(m.name)
     # ... rest of your code ...
     model = genai.GenerativeModel("gemini-2.0-flash")    
     prompt = f"""You are an expert career coach and resume reviewer.
