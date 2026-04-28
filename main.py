@@ -5,8 +5,6 @@ from spacy.matcher import PhraseMatcher
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
-import google.generativeai as genai
-import os
 
 # --- SETUP ---
 @st.cache_resource
@@ -120,33 +118,6 @@ def get_best_role_matches(detected_skills):
             results.append({"role": role, "category": category, "score": score, "matched": len(matched), "total": len(required)})
     return sorted(results, key=lambda x: x["score"], reverse=True)[:5]
 
-def get_ai_feedback(resume_text, matched, missing, role, score):
-    if "GEMINI_API_KEY" not in st.secrets:
-        return "⚠️ AI Feedback unavailable. Please configure GEMINI_API_KEY in Streamlit Secrets."
-    
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.0-flash")
-    
-    prompt = f"""You are an expert career coach and resume reviewer.
-
-Analyse this resume for the role of {role}. The candidate scored {score}% match.
-Matched skills: {', '.join(matched)}
-Missing skills: {', '.join(missing)}
-
-Resume text (first 2000 chars):
-{resume_text[:2000]}
-
-Provide:
-1. A 2-sentence overall assessment
-2. Top 3 specific resume improvement tips (be concrete, not generic)
-3. A 30-word elevator pitch they could use for this role
-4. One "hidden strength" you notice from the resume
-
-Format your response with clear headers for each section."""
-
-    with st.spinner("Generating AI feedback..."):
-        response = model.generate_content(prompt)
-        return response.text
 # =====================
 # --- UI STARTS HERE ---
 # =====================
