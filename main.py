@@ -202,7 +202,6 @@ with st.sidebar:
         selected_role = "Auto"
 
     st.divider()
-    enable_ai = st.toggle("Enable AI Feedback (Claude)", value=True)
     show_certs = st.toggle("Show Certification Suggestions", value=True)
 
 # --- MAIN AREA ---
