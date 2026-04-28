@@ -122,20 +122,11 @@ def get_best_role_matches(detected_skills):
 
 def get_ai_feedback(resume_text, matched, missing, role, score):
     if "GEMINI_API_KEY" not in st.secrets:
-        return "⚠️ AI Feedback is currently unavailable. Please configure the API Key in Streamlit Secrets."
+        return "⚠️ AI Feedback unavailable. Please configure GEMINI_API_KEY in Streamlit Secrets."
     
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-    import google.generativeai as genai
-import streamlit as st
-
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-for m in genai.list_models():
-    if "generateContent" in m.supported_generation_methods:
-        st.write(m.name)
-    # ... rest of your code ...
-    model = genai.GenerativeModel("gemini-2.0-flash")    
+    model = genai.GenerativeModel("gemini-2.0-flash")
+    
     prompt = f"""You are an expert career coach and resume reviewer.
 
 Analyse this resume for the role of {role}. The candidate scored {score}% match.
