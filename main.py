@@ -126,7 +126,7 @@ def get_ai_feedback(resume_text, matched, missing, role, score):
     
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     # ... rest of your code ...
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")    
+    model = genai.GenerativeModel("gemini-2.0-flash")    
     prompt = f"""You are an expert career coach and resume reviewer.
 
 Analyse this resume for the role of {role}. The candidate scored {score}% match.
