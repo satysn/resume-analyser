@@ -331,15 +331,6 @@ if uploaded_file:
             else:
                 st.info("No specific certifications mapped for missing skills.")
 
-        # ── AI FEEDBACK ──
-        if enable_ai:
-            st.markdown("---")
-            st.markdown('<div class="section-header">🤖 AI Career Coach Feedback</div>', unsafe_allow_html=True)
-            
-            if st.button("✨ Generate AI Feedback", type="primary"):
-                feedback = get_ai_feedback(content, matched, missing, selected_role, score)
-                st.markdown(feedback)
-
         # ── RAW TEXT ──
         st.markdown("---")
         with st.expander("📄 View Extracted Resume Text"):
