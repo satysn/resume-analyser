@@ -4,8 +4,8 @@
     {
       "name": "resume-analyser",
       "runtimeExecutable": "venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "streamlit", "run", "main.py", "--server.headless", "true"],
-      "port": 8501
+      "runtimeArgs": ["-m", "streamlit", "run", "main.py", "--server.headless", "true", "--server.port", "8517"],
+      "port": 8517
     }
   ]
 }

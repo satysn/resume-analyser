@@ -151,27 +151,27 @@ def analyze_resume_quality(text):
     checks.append({
         "label": "Resume length",
         "passed": 200 <= word_count <= 1200,
-        "detail": f"{word_count} words — aim for roughly 300–800 for 1–2 pages."
+        "detail": f"{word_count} words. Recruiters skim, they don't read — 300–800 words keeps it to one or two pages."
     })
     checks.append({
         "label": "Uses bullet points",
         "passed": len(bullets) >= 3,
-        "detail": f"{len(bullets)} bullet points detected. Bullets are easier to scan than paragraphs."
+        "detail": f"{len(bullets)} bullet points found. Dense paragraphs get skipped; bullets get read."
     })
     checks.append({
         "label": "Quantified achievements",
         "passed": len(quantified) >= max(1, len(bullets) // 3),
-        "detail": f"{len(quantified)}/{len(bullets) or 0} bullets include numbers or metrics (e.g. \"cut load time by 30%\")."
+        "detail": f"{len(quantified)}/{len(bullets) or 0} bullets include a number (e.g. \"cut load time by 30%\") instead of just a claim."
     })
     checks.append({
         "label": "Starts bullets with action verbs",
         "passed": len(verb_bullets) >= max(1, len(bullets) // 2),
-        "detail": f"{len(verb_bullets)}/{len(bullets) or 0} bullets start with a strong action verb."
+        "detail": f"{len(verb_bullets)}/{len(bullets) or 0} bullets open with a strong verb like \"built\" or \"led\" instead of \"responsible for\"."
     })
     checks.append({
         "label": "Has an email address",
         "passed": bool(re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)),
-        "detail": "Recruiters need a way to reach you directly on the resume."
+        "detail": "If a recruiter can't find your email in five seconds, they're not going to look for it."
     })
 
     score = int(100 * sum(1 for c in checks if c["passed"]) / len(checks))
@@ -282,53 +282,76 @@ st.markdown("""
         border: 1px solid rgba(128, 128, 128, 0.3);
         margin-bottom: 8px;
     }
+    .app-tagline {
+        font-size: 16px;
+        opacity: 0.75;
+        margin-top: -8px;
+        margin-bottom: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🎯 Resume Matcher Pro")
-st.caption("Upload your resume, pick a role, and get AI-powered feedback instantly.")
+st.markdown(
+    '<div class="app-tagline">A resume gets about six seconds from a human, and a screening bot before that. '
+    "This tells you what both of them will actually see.</div>",
+    unsafe_allow_html=True,
+)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    mode = st.radio("Analysis Mode", ["Role-Based", "Custom JD", "Auto-Match"])
+    st.header("🎛 Set Up the Comparison")
+
+    mode = st.radio("Check your resume against", ["A specific role", "A job description", "Every role at once"])
     st.divider()
-    
+
     target_skills = []
     selected_role = ""
 
-    if mode == "Role-Based":
-        category = st.selectbox("Category", list(ROLE_CATEGORIES.keys()))
+    if mode == "A specific role":
+        category = st.selectbox("Field", list(ROLE_CATEGORIES.keys()))
         selected_role = st.selectbox("Role", list(ROLE_CATEGORIES[category].keys()))
         target_skills = ROLE_CATEGORIES[category][selected_role]
-        st.info(f"**{len(target_skills)} skills** required for this role")
-        
-    elif mode == "Custom JD":
-        jd_input = st.text_area("Paste Job Description", height=200)
-        selected_role = st.text_input("Role Title", value="Custom Role")
-        if jd_input:
-            target_skills = extract_skills(jd_input)
-            st.success(f"Extracted **{len(target_skills)}** skills from JD")
-            
+        st.info(f"This role typically wants **{len(target_skills)} skills**. Let's see how many you've got.")
+
+    elif mode == "A job description":
+        jd_file = st.file_uploader("Upload the JD (PDF or .txt)", type=["pdf", "txt"])
+        jd_pasted = st.text_area("...or just paste it in", height=170, placeholder="Paste the job description here.")
+        selected_role = st.text_input("What should we call this role?", value="Target Role")
+
+        jd_text = ""
+        if jd_file is not None:
+            if jd_file.name.lower().endswith(".pdf"):
+                jd_text = extract_text_from_pdf(jd_file)
+            else:
+                jd_text = jd_file.read().decode("utf-8", errors="ignore")
+        elif jd_pasted:
+            jd_text = jd_pasted
+
+        if jd_text.strip():
+            target_skills = extract_skills(jd_text)
+            st.success(f"Found **{len(target_skills)}** skills mentioned in that posting.")
+        elif jd_file is not None:
+            st.warning("Couldn't pull any text out of that file — try pasting the description instead.")
+
     else:
-        st.info("Upload your resume and we'll find the best matching roles automatically.")
+        st.info("Skip picking a role. Upload your resume below and we'll rank it against everything we track.")
         selected_role = "Auto"
 
     st.divider()
-    show_certs = st.toggle("Show Certification Suggestions", value=True)
+    show_certs = st.toggle("Suggest certifications for gaps", value=True)
 
 # --- MAIN AREA ---
-uploaded_file = st.file_uploader("📄 Upload PDF Resume", type="pdf")
+uploaded_file = st.file_uploader("📄 Drop your resume in (PDF)", type="pdf")
 
 if uploaded_file:
     content = extract_text_from_pdf(uploaded_file)
 
     if len(content.strip()) < 50:
         st.error(
-            "⚠️ Couldn't extract meaningful text from this PDF. It may be a scanned "
-            "image or a design-heavy resume without a real text layer. Try exporting "
-            "a text-based PDF (e.g. directly from Word/Google Docs) instead."
+            "⚠️ Couldn't pull any real text out of this PDF. It's probably a scanned "
+            "image or a design-heavy layout with no actual text layer — and if we can't "
+            "read it, neither can an ATS. Try exporting straight from Word or Google Docs instead."
         )
         st.stop()
 
@@ -340,15 +363,15 @@ if uploaded_file:
     # ── TOP METRICS BAR ──
     st.markdown("---")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("👤 Candidate", contact["name"])
+    m1.metric("👤 Name", contact["name"])
     m2.metric("📧 Email", contact["email"])
     m3.metric("📞 Phone", contact["phone"])
-    m4.metric("🛠 Skills Detected", len(detected_skills))
+    m4.metric("🛠 Skills Found", len(detected_skills))
     st.markdown("---")
 
     # ── AUTO MATCH MODE ──
-    if mode == "Auto-Match":
-        st.markdown('<div class="section-header">🏆 Best Role Matches for Your Resume</div>', unsafe_allow_html=True)
+    if mode == "Every role at once":
+        st.markdown('<div class="section-header">🏆 Where You Rank</div>', unsafe_allow_html=True)
         matches = get_best_role_matches(detected_skills)
         
         cols = st.columns(len(matches))
@@ -364,7 +387,7 @@ if uploaded_file:
                     </div>
                 """, unsafe_allow_html=True)
 
-        st.markdown("#### 🛠 Your Detected Skills")
+        st.markdown("#### 🛠 Skills We Spotted On Your Resume")
         chips = " ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)])
         st.markdown(chips, unsafe_allow_html=True)
 
@@ -387,7 +410,7 @@ if uploaded_file:
                 mode="gauge+number+delta",
                 value=score,
                 delta={"reference": 70, "increasing": {"color": "#2ecc71"}, "decreasing": {"color": "#e74c3c"}},
-                title={"text": f"Match Score — {selected_role}", "font": {"size": 15}},
+                title={"text": f"{selected_role} Fit", "font": {"size": 15}},
                 gauge={
                     "axis": {"range": [0, 100], "tickwidth": 1},
                     "bar": {"color": color},
@@ -423,25 +446,25 @@ if uploaded_file:
 
         with right:
             # Skills breakdown
-            st.markdown('<div class="section-header">✅ Matched Skills</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">✅ You\'ve Got These</div>', unsafe_allow_html=True)
             if matched:
                 st.markdown(" ".join([f'<span class="skill-chip-green">{s}</span>' for s in matched]), unsafe_allow_html=True)
             else:
-                st.write("No matches found.")
+                st.write("None of the required skills showed up here — worth checking if that's accurate.")
 
-            st.markdown('<div class="section-header">❌ Missing Skills</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">❌ Still Missing</div>', unsafe_allow_html=True)
             if missing:
                 st.markdown(" ".join([f'<span class="skill-chip-red">{s}</span>' for s in missing]), unsafe_allow_html=True)
             else:
-                st.success("You have all required skills for this role!")
+                st.success("Every required skill shows up. You won't get filtered out on skills alone.")
 
-            st.markdown('<div class="section-header">🛠 All Detected Skills</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">🛠 Everything We Found</div>', unsafe_allow_html=True)
             st.markdown(" ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)]), unsafe_allow_html=True)
 
         # ── CERTIFICATION SUGGESTIONS ──
         if show_certs and missing:
             st.markdown("---")
-            st.markdown('<div class="section-header">🎓 Certification Roadmap</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">🎓 Ways to Close the Gap</div>', unsafe_allow_html=True)
             certs = get_cert_suggestions(missing)
             if certs:
                 cols = st.columns(min(len(certs), 3))
@@ -454,7 +477,7 @@ if uploaded_file:
                             </div>
                         """, unsafe_allow_html=True)
             else:
-                st.info("No specific certifications mapped for missing skills.")
+                st.info("Nothing's mapped to a certification here — but they're still worth learning either way.")
 
         render_quality_section(quality)
 
@@ -462,25 +485,25 @@ if uploaded_file:
         st.markdown("---")
         report = build_report_markdown(contact, exp_years, detected_skills, quality, selected_role, matched, missing, score)
         st.download_button(
-            "⬇️ Download Analysis Report (Markdown)",
+            "⬇️ Get the Full Report",
             data=report,
             file_name=f"{contact['name'].replace(' ', '_')}_resume_report.md",
             mime="text/markdown",
         )
 
         # ── RAW TEXT ──
-        with st.expander("📄 View Extracted Resume Text"):
+        with st.expander("📄 See What We Actually Read From Your PDF"):
             st.text_area("Raw Content", content, height=300)
 
     else:
-        st.warning("No target skills to compare against yet. Pick a role or paste a job description in the sidebar.")
+        st.warning("Pick a role or drop in a job description on the left — we need something to compare against.")
         render_quality_section(quality)
 
 else:
-    st.info("👆 Upload a PDF resume to get started.")
-    
+    st.info("👈 Nothing to check yet. Upload a resume above and pick how you want it compared on the left.")
+
     # Show sample roles while waiting
-    st.markdown("### 📋 Supported Role Categories")
+    st.markdown("### 📋 What We Can Check You Against")
     for cat, roles in ROLE_CATEGORIES.items():
         with st.expander(cat):
             for role, skills in roles.items():
