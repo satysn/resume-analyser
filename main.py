@@ -142,6 +142,14 @@ CERT_SUGGESTIONS = {
     "Google Analytics": "Google Analytics Certification",
 }
 
+# Synthetic resumes (fake names/contact info) shown automatically when no one has
+# uploaded a resume yet, so first-time visitors see a real result instead of an
+# empty state. Never a real person's data.
+SAMPLE_RESUMES = {
+    "Software Engineer": "samples/sample_software_engineer.pdf",
+    "Marketing Manager": "samples/sample_marketing_manager.pdf",
+}
+
 # --- FUNCTIONS ---
 def extract_text_from_pdf(file_obj):
     all_text = ""
@@ -172,7 +180,7 @@ def extract_contact_info(text):
             continue
         match = re.match(r'^([A-Z][a-zA-Z.\'-]+(?:\s+[A-Z][a-zA-Z.\'-]+){1,3})$', line)
         if match and len(match.group(1)) <= 40:
-            name = match.group(1)
+            name = re.sub(r'\s+', ' ', match.group(1))
             break
 
     return {
@@ -559,205 +567,217 @@ with st.sidebar:
 # --- MAIN AREA ---
 uploaded_file = st.file_uploader("📄 Drop your resume in (PDF)", type="pdf")
 
-if uploaded_file:
-    content = extract_text_from_pdf(uploaded_file)
-
-    if len(content.strip()) < 50:
-        st.error(
-            "⚠️ Couldn't pull any real text out of this PDF. It's probably a scanned "
-            "image or a design-heavy layout with no actual text layer — and if we can't "
-            "read it, neither can an ATS. Try exporting straight from Word or Google Docs instead."
+using_sample = uploaded_file is None
+sample_choice = None
+if using_sample:
+    banner_col, picker_col = st.columns([3, 2])
+    with banner_col:
+        st.info("👀 No resume uploaded yet — here's a sample analysis so you can see this in action.")
+    with picker_col:
+        sample_choice = st.selectbox(
+            "Sample resume", list(SAMPLE_RESUMES.keys()), label_visibility="collapsed"
         )
-        st.stop()
+    uploaded_file = open(SAMPLE_RESUMES[sample_choice], "rb")
 
-    contact = extract_contact_info(content)
-    detected_skills = extract_skills(content)
-    exp_years = estimate_experience(content)
-    quality = analyze_resume_quality(content)
+content = extract_text_from_pdf(uploaded_file)
 
-    # ── TOP STATS ──
-    st.markdown("<br>", unsafe_allow_html=True)
-    stats = [
-        ("👤", "Name", contact["name"]),
-        ("📧", "Email", contact["email"]),
-        ("📞", "Phone", contact["phone"]),
-        ("🛠", "Skills Found", str(len(detected_skills))),
-    ]
-    cols = st.columns(4)
-    for i, (icon, label, value) in enumerate(stats):
+if len(content.strip()) < 50:
+    st.error(
+        "⚠️ Couldn't pull any real text out of this PDF. It's probably a scanned "
+        "image or a design-heavy layout with no actual text layer — and if we can't "
+        "read it, neither can an ATS. Try exporting straight from Word or Google Docs instead."
+    )
+    st.stop()
+
+contact = extract_contact_info(content)
+detected_skills = extract_skills(content)
+exp_years = estimate_experience(content)
+quality = analyze_resume_quality(content)
+
+if using_sample:
+    st.caption(f"📌 Viewing the **{sample_choice}** sample. Upload your own PDF above to replace it.")
+
+# ── TOP STATS ──
+st.markdown("<br>", unsafe_allow_html=True)
+stats = [
+    ("👤", "Name", contact["name"]),
+    ("📧", "Email", contact["email"]),
+    ("📞", "Phone", contact["phone"]),
+    ("🛠", "Skills Found", str(len(detected_skills))),
+]
+cols = st.columns(4)
+for i, (icon, label, value) in enumerate(stats):
+    with cols[i]:
+        st.markdown(f"""
+            <div class="stat-card" style="animation-delay:{i * 0.05}s">
+                <div class="stat-icon">{icon}</div>
+                <div class="stat-label">{label}</div>
+                <div class="stat-value">{value}</div>
+            </div>
+        """, unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── AUTO MATCH MODE ──
+if mode == "Every role at once":
+    st.markdown('<div class="section-header">🏆 Where You Rank</div>', unsafe_allow_html=True)
+    matches = get_best_role_matches(detected_skills)
+
+    cols = st.columns(len(matches))
+    for i, match in enumerate(matches):
         with cols[i]:
+            color = "#10B981" if match["score"] >= 70 else "#F59E0B" if match["score"] >= 40 else "#F43F5E"
             st.markdown(f"""
-                <div class="stat-card" style="animation-delay:{i * 0.05}s">
-                    <div class="stat-icon">{icon}</div>
-                    <div class="stat-label">{label}</div>
-                    <div class="stat-value">{value}</div>
+                <div class="role-card" style='text-align:center; padding:16px; animation-delay:{i * 0.06}s'>
+                    <div style='font-size:28px; font-weight:700; color:{color}'>{match["score"]}%</div>
+                    <div style='font-weight:600; font-size:14px'>{match["role"]}</div>
+                    <div style='opacity:0.7; font-size:12px'>{match["category"]}</div>
+                    <div style='opacity:0.7; font-size:12px'>{match["matched"]}/{match["total"]} skills</div>
                 </div>
             """, unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── AUTO MATCH MODE ──
-    if mode == "Every role at once":
-        st.markdown('<div class="section-header">🏆 Where You Rank</div>', unsafe_allow_html=True)
-        matches = get_best_role_matches(detected_skills)
+    st.markdown("#### 🛠 Skills We Spotted On Your Resume")
+    chips = " ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)])
+    st.markdown(chips, unsafe_allow_html=True)
 
-        cols = st.columns(len(matches))
-        for i, match in enumerate(matches):
-            with cols[i]:
-                color = "#10B981" if match["score"] >= 70 else "#F59E0B" if match["score"] >= 40 else "#F43F5E"
-                st.markdown(f"""
-                    <div class="role-card" style='text-align:center; padding:16px; animation-delay:{i * 0.06}s'>
-                        <div style='font-size:28px; font-weight:700; color:{color}'>{match["score"]}%</div>
-                        <div style='font-weight:600; font-size:14px'>{match["role"]}</div>
-                        <div style='opacity:0.7; font-size:12px'>{match["category"]}</div>
-                        <div style='opacity:0.7; font-size:12px'>{match["matched"]}/{match["total"]} skills</div>
-                    </div>
-                """, unsafe_allow_html=True)
+    render_quality_section(quality)
+    st.stop()
 
-        st.markdown("#### 🛠 Skills We Spotted On Your Resume")
-        chips = " ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)])
-        st.markdown(chips, unsafe_allow_html=True)
+# ── ROLE-BASED / CUSTOM JD ──
+if target_skills:
+    res_lower = [s.lower() for s in detected_skills]
+    matched = [s for s in target_skills if s.lower() in res_lower]
+    missing = [s for s in target_skills if s.lower() not in res_lower]
+    score = int((len(matched) / len(target_skills)) * 100)
 
-        render_quality_section(quality)
-        st.stop()
+    left, right = st.columns([1, 1])
 
-    # ── ROLE-BASED / CUSTOM JD ──
-    if target_skills:
-        res_lower = [s.lower() for s in detected_skills]
-        matched = [s for s in target_skills if s.lower() in res_lower]
-        missing = [s for s in target_skills if s.lower() not in res_lower]
-        score = int((len(matched) / len(target_skills)) * 100)
+    with left:
+        # Gauge chart
+        color = "#10B981" if score >= 80 else "#F59E0B" if score >= 50 else "#F43F5E"
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=score,
+            delta={"reference": 70, "increasing": {"color": "#10B981"}, "decreasing": {"color": "#F43F5E"}},
+            title={"text": f"{selected_role} Fit", "font": {"size": 15}},
+            gauge={
+                "axis": {"range": [0, 100], "tickwidth": 1},
+                "bar": {"color": color},
+                "steps": [
+                    {"range": [0, 50], "color": "rgba(244,63,94,0.15)"},
+                    {"range": [50, 80], "color": "rgba(245,158,11,0.15)"},
+                    {"range": [80, 100], "color": "rgba(16,185,129,0.15)"}
+                ],
+                "threshold": {"line": {"color": "#8B5CF6", "width": 3}, "thickness": 0.75, "value": 70}
+            }
+        ))
+        fig.update_layout(
+            height=280, margin=dict(t=40, b=0, l=20, r=20),
+            paper_bgcolor="rgba(0,0,0,0)", font={"color": "#888"},
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-        left, right = st.columns([1, 1])
-
-        with left:
-            # Gauge chart
-            color = "#10B981" if score >= 80 else "#F59E0B" if score >= 50 else "#F43F5E"
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number+delta",
-                value=score,
-                delta={"reference": 70, "increasing": {"color": "#10B981"}, "decreasing": {"color": "#F43F5E"}},
-                title={"text": f"{selected_role} Fit", "font": {"size": 15}},
-                gauge={
-                    "axis": {"range": [0, 100], "tickwidth": 1},
-                    "bar": {"color": color},
-                    "steps": [
-                        {"range": [0, 50], "color": "rgba(244,63,94,0.15)"},
-                        {"range": [50, 80], "color": "rgba(245,158,11,0.15)"},
-                        {"range": [80, 100], "color": "rgba(16,185,129,0.15)"}
-                    ],
-                    "threshold": {"line": {"color": "#8B5CF6", "width": 3}, "thickness": 0.75, "value": 70}
-                }
+        # Radar chart
+        if len(target_skills) >= 3:
+            categories = target_skills[:8]
+            values = [1 if s.lower() in res_lower else 0 for s in categories]
+            fig2 = go.Figure(go.Scatterpolar(
+                r=values + [values[0]],
+                theta=categories + [categories[0]],
+                fill='toself',
+                fillcolor='rgba(139,92,246,0.25)',
+                line=dict(color='#8B5CF6')
             ))
-            fig.update_layout(
-                height=280, margin=dict(t=40, b=0, l=20, r=20),
+            fig2.update_layout(
+                polar=dict(radialaxis=dict(visible=False, range=[0, 1])),
+                showlegend=False, height=280,
+                margin=dict(t=20, b=20, l=40, r=40),
+                title=dict(text="Skill Coverage", font=dict(size=13)),
                 paper_bgcolor="rgba(0,0,0,0)", font={"color": "#888"},
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig2, use_container_width=True)
 
-            # Radar chart
-            if len(target_skills) >= 3:
-                categories = target_skills[:8]
-                values = [1 if s.lower() in res_lower else 0 for s in categories]
-                fig2 = go.Figure(go.Scatterpolar(
-                    r=values + [values[0]],
-                    theta=categories + [categories[0]],
-                    fill='toself',
-                    fillcolor='rgba(139,92,246,0.25)',
-                    line=dict(color='#8B5CF6')
-                ))
-                fig2.update_layout(
-                    polar=dict(radialaxis=dict(visible=False, range=[0, 1])),
-                    showlegend=False, height=280,
-                    margin=dict(t=20, b=20, l=40, r=40),
-                    title=dict(text="Skill Coverage", font=dict(size=13)),
-                    paper_bgcolor="rgba(0,0,0,0)", font={"color": "#888"},
-                )
-                st.plotly_chart(fig2, use_container_width=True)
+    with right:
+        # Skills breakdown
+        st.markdown('<div class="section-header">✅ You\'ve Got These</div>', unsafe_allow_html=True)
+        if matched:
+            st.markdown(" ".join([f'<span class="skill-chip-green">{s}</span>' for s in matched]), unsafe_allow_html=True)
+        else:
+            st.write("None of the required skills showed up here — worth checking if that's accurate.")
 
-        with right:
-            # Skills breakdown
-            st.markdown('<div class="section-header">✅ You\'ve Got These</div>', unsafe_allow_html=True)
-            if matched:
-                st.markdown(" ".join([f'<span class="skill-chip-green">{s}</span>' for s in matched]), unsafe_allow_html=True)
-            else:
-                st.write("None of the required skills showed up here — worth checking if that's accurate.")
+        st.markdown('<div class="section-header">❌ Still Missing</div>', unsafe_allow_html=True)
+        if missing:
+            st.markdown(" ".join([f'<span class="skill-chip-red">{s}</span>' for s in missing]), unsafe_allow_html=True)
+        else:
+            st.success("Every required skill shows up. You won't get filtered out on skills alone.")
 
-            st.markdown('<div class="section-header">❌ Still Missing</div>', unsafe_allow_html=True)
-            if missing:
-                st.markdown(" ".join([f'<span class="skill-chip-red">{s}</span>' for s in missing]), unsafe_allow_html=True)
-            else:
-                st.success("Every required skill shows up. You won't get filtered out on skills alone.")
+        st.markdown('<div class="section-header">🛠 Everything We Found</div>', unsafe_allow_html=True)
+        st.markdown(" ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)]), unsafe_allow_html=True)
 
-            st.markdown('<div class="section-header">🛠 Everything We Found</div>', unsafe_allow_html=True)
-            st.markdown(" ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)]), unsafe_allow_html=True)
-
-        # ── CERTIFICATION SUGGESTIONS ──
-        if show_certs and missing:
-            st.markdown("---")
-            st.markdown('<div class="section-header">🎓 Ways to Close the Gap</div>', unsafe_allow_html=True)
-            certs = get_cert_suggestions(missing)
-            if certs:
-                cols = st.columns(min(len(certs), 3))
-                for i, (skill, cert) in enumerate(certs.items()):
-                    with cols[i % 3]:
-                        st.markdown(f"""
-                            <div class="health-card" style="padding:12px 14px; animation-delay:{i * 0.05}s">
-                                <div style='font-weight:600; color:#F43F5E; font-size:13px'>Missing: {skill}</div>
-                                <div style='font-size:13px; margin-top:4px'>📜 {cert}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-            else:
-                st.info("Nothing's mapped to a certification here — but they're still worth learning either way.")
-
-        # ── AI FEEDBACK ──
-        if enable_ai:
-            st.markdown("---")
-            st.markdown('<div class="section-header">🤖 AI Career Coach</div>', unsafe_allow_html=True)
-            if not has_gemini_key():
-                st.info("Add a `GEMINI_API_KEY` in Streamlit Secrets to unlock this (see the sidebar note).")
-            elif st.button("✨ Generate AI Feedback", type="primary"):
-                with st.spinner("Reading between the lines..."):
-                    try:
-                        feedback = get_ai_feedback(content, matched, missing, selected_role, score)
-                        st.markdown(feedback)
-                    except ResourceExhausted:
-                        st.warning(
-                            "You've hit Gemini's free-tier daily limit for this model "
-                            "(it's a small cap — often just 20 requests/day). It resets "
-                            "on its own; no action needed, just try again later. Usage: "
-                            "[ai.dev/rate-limit](https://ai.dev/rate-limit)."
-                        )
-                    except GoogleAPICallError as e:
-                        st.error(f"Gemini couldn't process that request: {e.message if hasattr(e, 'message') else e}")
-                    except Exception as e:
-                        st.error(f"Couldn't get feedback from Gemini right now: {e}")
-
-        render_quality_section(quality)
-
-        # ── DOWNLOAD REPORT ──
+    # ── CERTIFICATION SUGGESTIONS ──
+    if show_certs and missing:
         st.markdown("---")
-        report = build_report_markdown(contact, exp_years, detected_skills, quality, selected_role, matched, missing, score)
-        st.download_button(
-            "⬇️ Get the Full Report",
-            data=report,
-            file_name=f"{contact['name'].replace(' ', '_')}_resume_report.md",
-            mime="text/markdown",
-        )
+        st.markdown('<div class="section-header">🎓 Ways to Close the Gap</div>', unsafe_allow_html=True)
+        certs = get_cert_suggestions(missing)
+        if certs:
+            cols = st.columns(min(len(certs), 3))
+            for i, (skill, cert) in enumerate(certs.items()):
+                with cols[i % 3]:
+                    st.markdown(f"""
+                        <div class="health-card" style="padding:12px 14px; animation-delay:{i * 0.05}s">
+                            <div style='font-weight:600; color:#F43F5E; font-size:13px'>Missing: {skill}</div>
+                            <div style='font-size:13px; margin-top:4px'>📜 {cert}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("Nothing's mapped to a certification here — but they're still worth learning either way.")
 
-        # ── RAW TEXT ──
-        with st.expander("📄 See What We Actually Read From Your PDF"):
-            st.text_area("Raw Content", content, height=300)
+    # ── AI FEEDBACK ──
+    if enable_ai:
+        st.markdown("---")
+        st.markdown('<div class="section-header">🤖 AI Career Coach</div>', unsafe_allow_html=True)
+        if not has_gemini_key():
+            st.info("Add a `GEMINI_API_KEY` in Streamlit Secrets to unlock this (see the sidebar note).")
+        elif st.button("✨ Generate AI Feedback", type="primary"):
+            with st.spinner("Reading between the lines..."):
+                try:
+                    feedback = get_ai_feedback(content, matched, missing, selected_role, score)
+                    st.markdown(feedback)
+                except ResourceExhausted:
+                    st.warning(
+                        "You've hit Gemini's free-tier daily limit for this model "
+                        "(it's a small cap — often just 20 requests/day). It resets "
+                        "on its own; no action needed, just try again later. Usage: "
+                        "[ai.dev/rate-limit](https://ai.dev/rate-limit)."
+                    )
+                except GoogleAPICallError as e:
+                    st.error(f"Gemini couldn't process that request: {e.message if hasattr(e, 'message') else e}")
+                except Exception as e:
+                    st.error(f"Couldn't get feedback from Gemini right now: {e}")
 
-    else:
-        st.warning("Pick a role or drop in a job description on the left — we need something to compare against.")
-        render_quality_section(quality)
+    render_quality_section(quality)
+
+    # ── DOWNLOAD REPORT ──
+    st.markdown("---")
+    report = build_report_markdown(contact, exp_years, detected_skills, quality, selected_role, matched, missing, score)
+    st.download_button(
+        "⬇️ Get the Full Report",
+        data=report,
+        file_name=f"{contact['name'].replace(' ', '_')}_resume_report.md",
+        mime="text/markdown",
+    )
+
+    # ── RAW TEXT ──
+    with st.expander("📄 See What We Actually Read From Your PDF"):
+        st.text_area("Raw Content", content, height=300)
 
 else:
-    st.info("👈 Nothing to check yet. Upload a resume above and pick how you want it compared on the left.")
+    st.warning("Pick a role or drop in a job description on the left — we need something to compare against.")
+    render_quality_section(quality)
 
-    # Show sample roles while waiting
-    st.markdown("### 📋 What We Can Check You Against")
+# ── ROLE BROWSER ──
+st.markdown("---")
+with st.expander("📋 Browse everything we can check you against"):
     for cat, roles in ROLE_CATEGORIES.items():
-        with st.expander(cat):
-            for role, skills in roles.items():
-                st.markdown(f"**{role}**: {', '.join(skills)}")
+        st.markdown(f"**{cat}**")
+        for role, skills in roles.items():
+            st.markdown(f"- **{role}**: {', '.join(skills)}")
