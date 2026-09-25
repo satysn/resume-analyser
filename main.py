@@ -5,6 +5,7 @@ from spacy.matcher import PhraseMatcher
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
+import google.generativeai as genai
 
 # --- SETUP ---
 @st.cache_resource
@@ -194,6 +195,38 @@ def get_best_role_matches(detected_skills):
             score = int((len(matched) / len(required)) * 100)
             results.append({"role": role, "category": category, "score": score, "matched": len(matched), "total": len(required)})
     return sorted(results, key=lambda x: x["score"], reverse=True)[:5]
+
+def has_gemini_key():
+    try:
+        return "GEMINI_API_KEY" in st.secrets
+    except Exception:
+        return False
+
+def get_ai_feedback(resume_text, matched, missing, role, score):
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    prompt = f"""You are a blunt, experienced hiring manager reviewing a resume, not a hype machine.
+
+The candidate is targeting: {role}. Their skill-match score against this role is {score}%.
+Matched skills: {', '.join(matched) if matched else 'none'}
+Missing skills: {', '.join(missing) if missing else 'none'}
+
+Resume text (first 2500 characters):
+{resume_text[:2500]}
+
+Give me, in plain markdown with these exact headers:
+### Overall take
+Two sentences, honest, no fluff.
+### Fix these three things
+Three specific, concrete edits tied to actual content in this resume — not generic advice like "use action verbs."
+### 30-word pitch
+A tight elevator pitch this candidate could say out loud for this specific role.
+### One thing they're underselling
+Something in the resume that's stronger than how it's currently written."""
+
+    response = model.generate_content(prompt)
+    return response.text
 
 def render_quality_section(quality):
     st.markdown("---")
@@ -443,6 +476,14 @@ with st.sidebar:
     st.divider()
     show_certs = st.toggle("Suggest certifications for gaps", value=True)
 
+    enable_ai = st.toggle("Generate AI feedback (Gemini)", value=has_gemini_key())
+    if enable_ai and not has_gemini_key():
+        st.caption(
+            "⚠️ No GEMINI_API_KEY found in Streamlit Secrets. Grab a free key from "
+            "[Google AI Studio](https://aistudio.google.com/apikey) and add it as "
+            "`GEMINI_API_KEY` under Settings → Secrets."
+        )
+
 # --- MAIN AREA ---
 uploaded_file = st.file_uploader("📄 Drop your resume in (PDF)", type="pdf")
 
@@ -595,6 +636,20 @@ if uploaded_file:
                         """, unsafe_allow_html=True)
             else:
                 st.info("Nothing's mapped to a certification here — but they're still worth learning either way.")
+
+        # ── AI FEEDBACK ──
+        if enable_ai:
+            st.markdown("---")
+            st.markdown('<div class="section-header">🤖 AI Career Coach</div>', unsafe_allow_html=True)
+            if not has_gemini_key():
+                st.info("Add a `GEMINI_API_KEY` in Streamlit Secrets to unlock this (see the sidebar note).")
+            elif st.button("✨ Generate AI Feedback", type="primary"):
+                with st.spinner("Reading between the lines..."):
+                    try:
+                        feedback = get_ai_feedback(content, matched, missing, selected_role, score)
+                        st.markdown(feedback)
+                    except Exception as e:
+                        st.error(f"Couldn't get feedback from Gemini right now: {e}")
 
         render_quality_section(quality)
 

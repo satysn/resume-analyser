@@ -48,6 +48,9 @@ An intelligent, web-based application designed to help candidates evaluate and o
 **⬇️ Downloadable Report**
   Export the full analysis — score, matched/missing skills, and health check — as a Markdown report.
 
+**🤖 AI Career Coach (optional)**
+  Generates a blunt, specific critique via Gemini — concrete edits, a 30-word elevator pitch, and an underselling strength — gated behind your own free `GEMINI_API_KEY`, called only when you click the button.
+
 🛠️ Tech Stack
 * **Language:** Python 3.11
 * **Frontend / Interface:** Streamlit
@@ -70,7 +73,11 @@ git clone https://github.com/satysn/resume-analyser.git
 cd resume-analyser
 2. Install dependencies
 pip install -r requirements.txt
-3. Run the application
+3. (Optional) Enable AI feedback
+Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and add a free
+Gemini key from https://aistudio.google.com/apikey. Skip this and the app still
+works fully — AI feedback is opt-in.
+4. Run the application
 streamlit run main.py
 
 
