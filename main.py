@@ -23,23 +23,78 @@ ROLE_CATEGORIES = {
         "Fullstack Developer": ["Python", "JavaScript", "React", "Node.js", "SQL", "Git", "AWS", "API"],
         "DevOps Engineer": ["Docker", "Kubernetes", "AWS", "Terraform", "CI/CD", "Linux", "Jenkins", "Python"],
         "Mobile Developer": ["Swift", "Kotlin", "React Native", "Flutter", "iOS", "Android", "Git", "REST API"],
+        "QA Engineer": ["Test Automation", "Selenium", "JUnit", "Manual Testing", "Bug Tracking", "API Testing", "Regression Testing"],
+        "Security Engineer": ["Penetration Testing", "SIEM", "Network Security", "Vulnerability Assessment", "Python", "Linux", "Incident Response"],
+        "Cloud Architect": ["AWS", "Azure", "GCP", "Terraform", "Kubernetes", "System Design", "Cost Optimization"],
+        "Game Developer": ["Unity", "C#", "Unreal Engine", "C++", "Game Design", "3D Modeling", "Git"],
     },
     "Data & AI": {
         "Data Scientist": ["Python", "Machine Learning", "Data Analysis", "SQL", "Statistics", "Pandas", "NumPy", "Scikit-learn"],
         "Data Analyst": ["SQL", "Excel", "Tableau", "Power BI", "Python", "Statistics", "Data Cleaning"],
         "AI/ML Engineer": ["PyTorch", "TensorFlow", "Deep Learning", "NLP", "Python", "Computer Vision", "Math"],
         "Data Engineer": ["Apache Spark", "Airflow", "SQL", "Python", "AWS", "ETL", "Kafka", "dbt"],
+        "MLOps Engineer": ["MLflow", "Docker", "Kubernetes", "CI/CD", "Python", "Model Deployment", "AWS"],
+        "BI Developer": ["Power BI", "Tableau", "SQL", "Data Warehousing", "DAX", "ETL", "Excel"],
     },
     "Business & Management": {
         "Project Manager": ["Leadership", "Communication", "Agile", "Scrum", "Risk Management", "Budgeting", "Excel", "Jira"],
         "Product Manager": ["Product Roadmap", "User Research", "Market Analysis", "Agile", "Jira", "Strategy", "Data Analysis"],
-        "Marketing Manager": ["SEO", "Content Strategy", "Google Analytics", "Social Media", "Copywriting", "Email Marketing"],
         "Business Analyst": ["SQL", "Excel", "Requirements Gathering", "Data Analysis", "Stakeholder Management", "Agile"],
+        "Operations Manager": ["Process Improvement", "Supply Chain", "Six Sigma", "Budgeting", "Vendor Management", "Excel", "KPI Tracking"],
+        "Sales Manager": ["CRM", "Salesforce", "Negotiation", "Lead Generation", "Pipeline Management", "B2B Sales", "Forecasting"],
+        "Customer Success Manager": ["CRM", "Account Management", "Onboarding", "Churn Reduction", "Salesforce", "Communication"],
+    },
+    "Marketing": {
+        "Marketing Manager": ["SEO", "Content Strategy", "Google Analytics", "Social Media", "Copywriting", "Email Marketing"],
+        "Digital Marketing Specialist": ["SEO", "SEM", "Google Ads", "Google Analytics", "Social Media", "Email Marketing", "A/B Testing"],
+        "Content Marketer": ["Content Strategy", "Copywriting", "SEO", "WordPress", "Content Calendar", "Google Analytics"],
+        "Social Media Manager": ["Social Media", "Content Creation", "Canva", "Community Management", "Google Analytics", "Copywriting"],
     },
     "Design & Creative": {
         "UI/UX Designer": ["Figma", "User Research", "Wireframing", "Prototyping", "Adobe XD", "CSS", "Design Systems"],
         "Graphic Designer": ["Photoshop", "Illustrator", "InDesign", "Typography", "Branding", "Figma"],
-    }
+        "Motion Designer": ["After Effects", "Premiere Pro", "Animation", "Storyboarding", "Cinema 4D"],
+        "Content Writer": ["Copywriting", "SEO Writing", "Content Strategy", "Editing", "WordPress"],
+        "Video Editor": ["Premiere Pro", "Final Cut Pro", "Color Grading", "Storytelling", "After Effects"],
+    },
+    "Finance & Accounting": {
+        "Accountant": ["Bookkeeping", "QuickBooks", "GAAP", "Excel", "Tax Preparation", "Financial Reporting", "Reconciliation"],
+        "Financial Analyst": ["Financial Modeling", "Excel", "Valuation", "Forecasting", "Bloomberg Terminal", "SQL", "Data Analysis"],
+        "Investment Banking Analyst": ["Financial Modeling", "Valuation", "M&A", "Excel", "PowerPoint", "DCF Analysis"],
+        "Auditor": ["Internal Audit", "GAAP", "Risk Assessment", "Compliance", "Excel", "SOX"],
+    },
+    "Human Resources": {
+        "HR Generalist": ["Recruiting", "Onboarding", "HRIS", "Employee Relations", "Payroll", "Compliance"],
+        "Talent Acquisition Specialist": ["Sourcing", "LinkedIn Recruiter", "ATS", "Interviewing", "Employer Branding", "Negotiation"],
+        "Learning & Development Specialist": ["Training Design", "Curriculum Development", "LMS", "Facilitation", "Needs Assessment"],
+    },
+    "Engineering (Non-Software)": {
+        "Mechanical Engineer": ["AutoCAD", "SolidWorks", "GD&T", "Thermodynamics", "MATLAB", "Manufacturing Processes"],
+        "Civil Engineer": ["AutoCAD", "Structural Analysis", "Revit", "Construction Management", "Surveying", "Project Management"],
+        "Electrical Engineer": ["Circuit Design", "PLC Programming", "MATLAB", "Power Systems", "AutoCAD Electrical", "PCB Design"],
+        "Chemical Engineer": ["Process Design", "Aspen Plus", "Mass Transfer", "Thermodynamics", "Six Sigma", "Safety Compliance"],
+    },
+    "Healthcare & Life Sciences": {
+        "Registered Nurse": ["Patient Care", "EMR/EHR", "Clinical Assessment", "Medication Administration", "HIPAA", "Vital Signs"],
+        "Clinical Research Associate": ["Clinical Trials", "GCP", "Protocol Development", "Data Collection", "Regulatory Compliance", "CRF"],
+        "Medical Lab Technician": ["Phlebotomy", "Lab Testing", "Specimen Processing", "Quality Control", "Lab Equipment", "HIPAA"],
+        "Pharmacist": ["Medication Dispensing", "Drug Interactions", "Patient Counseling", "Pharmacy Software", "HIPAA", "Compounding"],
+    },
+    "Legal": {
+        "Paralegal": ["Legal Research", "Document Drafting", "Case Management", "Westlaw", "LexisNexis", "Contract Review"],
+        "Corporate Lawyer": ["Contract Negotiation", "Legal Research", "Due Diligence", "Compliance", "Corporate Governance", "Litigation"],
+        "Compliance Officer": ["Regulatory Compliance", "Risk Assessment", "Policy Development", "Auditing", "Legal Research"],
+    },
+    "Education": {
+        "Teacher": ["Curriculum Development", "Classroom Management", "Lesson Planning", "Student Assessment", "Differentiated Instruction"],
+        "Instructional Designer": ["Curriculum Development", "LMS", "Articulate Storyline", "Needs Assessment", "eLearning"],
+        "Academic Advisor": ["Student Counseling", "Degree Planning", "Case Management", "Communication"],
+    },
+    "Supply Chain & Operations": {
+        "Supply Chain Manager": ["Logistics", "Inventory Management", "Procurement", "SAP", "Demand Planning", "Vendor Management"],
+        "Logistics Coordinator": ["Shipping", "Inventory Management", "ERP", "Freight", "Excel", "Vendor Management"],
+        "Quality Control Inspector": ["Quality Assurance", "Six Sigma", "ISO 9001", "Inspection", "Root Cause Analysis", "Documentation"],
+    },
 }
 
 DEFAULT_SKILLS = [
@@ -74,6 +129,16 @@ CERT_SUGGESTIONS = {
     "Tableau": "Tableau Desktop Specialist",
     "TensorFlow": "TensorFlow Developer Certificate",
     "Project Management": "PMP or PRINCE2",
+    "Six Sigma": "Six Sigma Green Belt",
+    "Salesforce": "Salesforce Certified Administrator",
+    "QuickBooks": "QuickBooks Certified User",
+    "SAP": "SAP Certified Application Associate",
+    "SolidWorks": "SolidWorks CSWA",
+    "AutoCAD": "Autodesk AutoCAD Certified User",
+    "HIPAA": "HIPAA Compliance Certificate",
+    "GAAP": "CPA (Certified Public Accountant)",
+    "ISO 9001": "ISO 9001 Lead Auditor",
+    "Google Analytics": "Google Analytics Certification",
 }
 
 # --- FUNCTIONS ---
@@ -422,12 +487,14 @@ st.markdown(
     "This tells you what both of them will actually see.</div>",
     unsafe_allow_html=True,
 )
+_role_count = sum(len(roles) for roles in ROLE_CATEGORIES.values())
+_field_count = len(ROLE_CATEGORIES)
 st.markdown(
-    """
+    f"""
     <div class="app-badges">
         <span class="app-badge">🧠 Rule-based scoring, AI feedback optional</span>
         <span class="app-badge">⚡ Results in seconds</span>
-        <span class="app-badge">🎯 16 roles across 4 fields</span>
+        <span class="app-badge">🎯 {_role_count} roles across {_field_count} fields</span>
     </div>
     """,
     unsafe_allow_html=True,
