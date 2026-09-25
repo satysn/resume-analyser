@@ -6,6 +6,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted, GoogleAPICallError
 
 # --- SETUP ---
 @st.cache_resource
@@ -715,6 +716,15 @@ if uploaded_file:
                     try:
                         feedback = get_ai_feedback(content, matched, missing, selected_role, score)
                         st.markdown(feedback)
+                    except ResourceExhausted:
+                        st.warning(
+                            "You've hit Gemini's free-tier daily limit for this model "
+                            "(it's a small cap — often just 20 requests/day). It resets "
+                            "on its own; no action needed, just try again later. Usage: "
+                            "[ai.dev/rate-limit](https://ai.dev/rate-limit)."
+                        )
+                    except GoogleAPICallError as e:
+                        st.error(f"Gemini couldn't process that request: {e.message if hasattr(e, 'message') else e}")
                     except Exception as e:
                         st.error(f"Couldn't get feedback from Gemini right now: {e}")
 
