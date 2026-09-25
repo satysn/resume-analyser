@@ -198,14 +198,14 @@ def get_best_role_matches(detected_skills):
 def render_quality_section(quality):
     st.markdown("---")
     st.markdown('<div class="section-header">🩺 Resume Health Check</div>', unsafe_allow_html=True)
-    color = "#2ecc71" if quality["score"] >= 80 else "#ffa500" if quality["score"] >= 50 else "#e74c3c"
+    color = "#10B981" if quality["score"] >= 80 else "#F59E0B" if quality["score"] >= 50 else "#F43F5E"
     st.markdown(f"**Overall score: <span style='color:{color}'>{quality['score']}/100</span>**", unsafe_allow_html=True)
     cols = st.columns(2)
     for i, check in enumerate(quality["checks"]):
         icon = "✅" if check["passed"] else "⚠️"
         with cols[i % 2]:
             st.markdown(f"""
-                <div class="health-card">
+                <div class="health-card" style="padding:12px 14px; animation-delay:{i * 0.05}s">
                     <div style='font-weight:600; font-size:13px'>{icon} {check['label']}</div>
                     <div style='font-size:12px; opacity:0.75; margin-top:2px'>{check['detail']}</div>
                 </div>
@@ -239,62 +239,164 @@ def build_report_markdown(contact, exp_years, detected_skills, quality, selected
 
 st.set_page_config(page_title="Resume Matcher Pro", layout="wide", page_icon="🎯")
 
-# Custom CSS
+# Custom theme. Streamlit's own widgets (radio, uploader, buttons, alerts...) are
+# targeted through their data-testid attributes, which are stable across Streamlit
+# releases even though the generated class names underneath are not.
 st.markdown("""
 <style>
-    .skill-chip-green {
-        display: inline-block;
-        background: #d4edda;
-        color: #155724;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        margin: 3px;
-    }
-    .skill-chip-red {
-        display: inline-block;
-        background: #f8d7da;
-        color: #721c24;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        margin: 3px;
-    }
-    .skill-chip-blue {
-        display: inline-block;
-        background: #cce5ff;
-        color: #004085;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        margin: 3px;
-    }
-    .section-header {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 20px 0 10px 0;
-        padding-bottom: 6px;
-        border-bottom: 2px solid rgba(128, 128, 128, 0.3);
-    }
-    .health-card {
-        padding: 10px 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.3);
-        margin-bottom: 8px;
-    }
-    .app-tagline {
-        font-size: 16px;
-        opacity: 0.75;
-        margin-top: -8px;
-        margin-bottom: 4px;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+/* Only retarget text we fully control. Streamlit's own widgets render icon
+   ligatures (e.g. "upload", "arrow_right") through span font-families — a
+   blanket font-family override anywhere near them renders those as literal
+   text instead of glyphs, so headings/labels/spans are deliberately left alone. */
+h1, h2, h3, .app-hero-title, .section-header,
+.app-tagline, .app-badge, .stat-card, .role-card, .health-card {
+    font-family: 'Inter', sans-serif;
+}
+h1, h2, h3, .app-hero-title, .section-header {
+    font-family: 'Sora', sans-serif !important;
+}
+
+[data-testid="stAppViewContainer"] .block-container { padding-top: 2.2rem; max-width: 1180px; }
+
+/* ---------- Hero ---------- */
+.app-hero-title {
+    font-size: 40px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #8B5CF6 0%, #10B981 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+.app-tagline {
+    font-size: 15.5px;
+    opacity: 0.72;
+    max-width: 640px;
+    margin: 0 0 14px 0;
+    line-height: 1.5;
+}
+.app-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.app-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(127,127,127,0.07);
+    border: 1px solid rgba(127,127,127,0.18);
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 500; opacity: 0.85;
+}
+
+/* ---------- Sidebar ---------- */
+[data-testid="stSidebar"] { border-right: 1px solid rgba(127,127,127,0.14); }
+[data-testid="stSidebar"] h2 { font-family: 'Sora', sans-serif !important; font-size: 18px; }
+
+/* ---------- Mode selector as pill tabs ---------- */
+div[data-testid="stRadio"] > div[role="radiogroup"] { display: flex; flex-direction: column; gap: 6px; }
+div[data-testid="stRadio"] label {
+    background: rgba(127,127,127,0.06);
+    border: 1px solid rgba(127,127,127,0.16);
+    border-radius: 10px;
+    padding: 10px 14px !important;
+    margin: 0 !important;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+div[data-testid="stRadio"] label:hover { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.4); }
+div[data-testid="stRadio"] label:has(input:checked) {
+    background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(16,185,129,0.18));
+    border-color: rgba(16,185,129,0.55);
+}
+div[data-testid="stRadio"] label:has(input:checked) p { font-weight: 700; }
+div[data-testid="stRadio"] label > div:first-child { display: none; }
+
+/* ---------- File uploader ---------- */
+section[data-testid="stFileUploaderDropzone"] {
+    background: rgba(127,127,127,0.05);
+    border: 1.5px dashed rgba(127,127,127,0.3);
+    border-radius: 14px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+section[data-testid="stFileUploaderDropzone"]:hover { border-color: #10B981; background: rgba(16,185,129,0.06); }
+
+/* ---------- Buttons ---------- */
+button[data-testid^="stBaseButton"] { border-radius: 10px !important; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+button[data-testid^="stBaseButton"]:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+button[data-testid="stBaseButton-primary"] { background: linear-gradient(135deg, #10B981, #059669) !important; border: none !important; }
+
+/* ---------- Alerts & expanders ---------- */
+div[data-testid="stAlert"] { border-radius: 12px; }
+div[data-testid="stExpander"] details { border-radius: 12px !important; border: 1px solid rgba(127,127,127,0.16) !important; }
+
+/* ---------- Cards ---------- */
+.stat-card {
+    background: rgba(127,127,127,0.05);
+    border: 1px solid rgba(127,127,127,0.15);
+    border-radius: 14px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.4s ease both;
+}
+.stat-card .stat-icon { font-size: 19px; }
+.stat-card .stat-label { font-size: 12px; opacity: 0.62; margin-top: 3px; }
+.stat-card .stat-value { font-size: 17px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
+
+.role-card, .health-card {
+    background: rgba(127,127,127,0.05);
+    border: 1px solid rgba(127,127,127,0.15);
+    border-radius: 14px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    animation: fadeInUp 0.45s ease both;
+}
+.role-card:hover, .health-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+    border-color: rgba(16,185,129,0.4);
+}
+
+.section-header {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 22px 0 12px 0;
+    padding-left: 12px;
+    border-left: 4px solid #10B981;
+}
+
+/* ---------- Skill chips ---------- */
+.skill-chip-green, .skill-chip-red, .skill-chip-blue {
+    display: inline-flex; align-items: center;
+    padding: 5px 13px; border-radius: 999px;
+    font-size: 13px; font-weight: 500; margin: 3px;
+    transition: transform 0.15s ease;
+}
+.skill-chip-green:hover, .skill-chip-red:hover, .skill-chip-blue:hover { transform: scale(1.06); }
+.skill-chip-green { background: rgba(16,185,129,0.16); color: #10B981; border: 1px solid rgba(16,185,129,0.35); }
+.skill-chip-red { background: rgba(244,63,94,0.14); color: #F43F5E; border: 1px solid rgba(244,63,94,0.35); }
+.skill-chip-blue { background: rgba(139,92,246,0.14); color: #8B5CF6; border: 1px solid rgba(139,92,246,0.35); }
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+textarea::-webkit-scrollbar { width: 8px; }
+textarea::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.35); border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Resume Matcher Pro")
+st.markdown('<div class="app-hero-title">🎯 Resume Matcher Pro</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="app-tagline">A resume gets about six seconds from a human, and a screening bot before that. '
     "This tells you what both of them will actually see.</div>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    """
+    <div class="app-badges">
+        <span class="app-badge">🧠 spaCy NLP, no GPT calls</span>
+        <span class="app-badge">⚡ Results in seconds</span>
+        <span class="app-badge">🎯 16 roles across 4 fields</span>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -360,26 +462,37 @@ if uploaded_file:
     exp_years = estimate_experience(content)
     quality = analyze_resume_quality(content)
 
-    # ── TOP METRICS BAR ──
-    st.markdown("---")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("👤 Name", contact["name"])
-    m2.metric("📧 Email", contact["email"])
-    m3.metric("📞 Phone", contact["phone"])
-    m4.metric("🛠 Skills Found", len(detected_skills))
-    st.markdown("---")
+    # ── TOP STATS ──
+    st.markdown("<br>", unsafe_allow_html=True)
+    stats = [
+        ("👤", "Name", contact["name"]),
+        ("📧", "Email", contact["email"]),
+        ("📞", "Phone", contact["phone"]),
+        ("🛠", "Skills Found", str(len(detected_skills))),
+    ]
+    cols = st.columns(4)
+    for i, (icon, label, value) in enumerate(stats):
+        with cols[i]:
+            st.markdown(f"""
+                <div class="stat-card" style="animation-delay:{i * 0.05}s">
+                    <div class="stat-icon">{icon}</div>
+                    <div class="stat-label">{label}</div>
+                    <div class="stat-value">{value}</div>
+                </div>
+            """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # ── AUTO MATCH MODE ──
     if mode == "Every role at once":
         st.markdown('<div class="section-header">🏆 Where You Rank</div>', unsafe_allow_html=True)
         matches = get_best_role_matches(detected_skills)
-        
+
         cols = st.columns(len(matches))
         for i, match in enumerate(matches):
             with cols[i]:
-                color = "#2ecc71" if match["score"] >= 70 else "#ffa500" if match["score"] >= 40 else "#e74c3c"
+                color = "#10B981" if match["score"] >= 70 else "#F59E0B" if match["score"] >= 40 else "#F43F5E"
                 st.markdown(f"""
-                    <div style='text-align:center; padding:16px; border-radius:12px; border: 1px solid rgba(128,128,128,0.3);'>
+                    <div class="role-card" style='text-align:center; padding:16px; animation-delay:{i * 0.06}s'>
                         <div style='font-size:28px; font-weight:700; color:{color}'>{match["score"]}%</div>
                         <div style='font-weight:600; font-size:14px'>{match["role"]}</div>
                         <div style='opacity:0.7; font-size:12px'>{match["category"]}</div>
@@ -405,24 +518,27 @@ if uploaded_file:
 
         with left:
             # Gauge chart
-            color = "#2ecc71" if score >= 80 else "#ffa500" if score >= 50 else "#e74c3c"
+            color = "#10B981" if score >= 80 else "#F59E0B" if score >= 50 else "#F43F5E"
             fig = go.Figure(go.Indicator(
                 mode="gauge+number+delta",
                 value=score,
-                delta={"reference": 70, "increasing": {"color": "#2ecc71"}, "decreasing": {"color": "#e74c3c"}},
+                delta={"reference": 70, "increasing": {"color": "#10B981"}, "decreasing": {"color": "#F43F5E"}},
                 title={"text": f"{selected_role} Fit", "font": {"size": 15}},
                 gauge={
                     "axis": {"range": [0, 100], "tickwidth": 1},
                     "bar": {"color": color},
                     "steps": [
-                        {"range": [0, 50], "color": "#ffe0e0"},
-                        {"range": [50, 80], "color": "#fff3cd"},
-                        {"range": [80, 100], "color": "#d4edda"}
+                        {"range": [0, 50], "color": "rgba(244,63,94,0.15)"},
+                        {"range": [50, 80], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [80, 100], "color": "rgba(16,185,129,0.15)"}
                     ],
-                    "threshold": {"line": {"color": "black", "width": 3}, "thickness": 0.75, "value": 70}
+                    "threshold": {"line": {"color": "#8B5CF6", "width": 3}, "thickness": 0.75, "value": 70}
                 }
             ))
-            fig.update_layout(height=280, margin=dict(t=40, b=0, l=20, r=20))
+            fig.update_layout(
+                height=280, margin=dict(t=40, b=0, l=20, r=20),
+                paper_bgcolor="rgba(0,0,0,0)", font={"color": "#888"},
+            )
             st.plotly_chart(fig, use_container_width=True)
 
             # Radar chart
@@ -433,14 +549,15 @@ if uploaded_file:
                     r=values + [values[0]],
                     theta=categories + [categories[0]],
                     fill='toself',
-                    fillcolor='rgba(31,119,180,0.2)',
-                    line=dict(color='#1f77b4')
+                    fillcolor='rgba(139,92,246,0.25)',
+                    line=dict(color='#8B5CF6')
                 ))
                 fig2.update_layout(
                     polar=dict(radialaxis=dict(visible=False, range=[0, 1])),
                     showlegend=False, height=280,
                     margin=dict(t=20, b=20, l=40, r=40),
-                    title=dict(text="Skill Coverage", font=dict(size=13))
+                    title=dict(text="Skill Coverage", font=dict(size=13)),
+                    paper_bgcolor="rgba(0,0,0,0)", font={"color": "#888"},
                 )
                 st.plotly_chart(fig2, use_container_width=True)
 
@@ -471,8 +588,8 @@ if uploaded_file:
                 for i, (skill, cert) in enumerate(certs.items()):
                     with cols[i % 3]:
                         st.markdown(f"""
-                            <div class="health-card">
-                                <div style='font-weight:600; color:#e74c3c; font-size:13px'>Missing: {skill}</div>
+                            <div class="health-card" style="padding:12px 14px; animation-delay:{i * 0.05}s">
+                                <div style='font-weight:600; color:#F43F5E; font-size:13px'>Missing: {skill}</div>
                                 <div style='font-size:13px; margin-top:4px'>📜 {cert}</div>
                             </div>
                         """, unsafe_allow_html=True)
