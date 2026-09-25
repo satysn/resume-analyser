@@ -204,7 +204,7 @@ def has_gemini_key():
 
 def get_ai_feedback(resume_text, matched, missing, role, score):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-3.8-flash")
 
     prompt = f"""You are a blunt, experienced hiring manager reviewing a resume, not a hype machine.
 
@@ -425,7 +425,7 @@ st.markdown(
 st.markdown(
     """
     <div class="app-badges">
-        <span class="app-badge">🧠 spaCy NLP, no GPT calls</span>
+        <span class="app-badge">🧠 Rule-based scoring, AI feedback optional</span>
         <span class="app-badge">⚡ Results in seconds</span>
         <span class="app-badge">🎯 16 roles across 4 fields</span>
     </div>
