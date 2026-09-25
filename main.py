@@ -270,7 +270,11 @@ def has_gemini_key():
 
 def get_ai_feedback(resume_text, matched, missing, role, score):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-3.8-flash")
+    # "-latest" alias tracks Google's current recommended lite model, so this
+    # doesn't need updating every time a pinned model version gets sunset. The
+    # lite tier also carries its own separate free-tier quota from the full
+    # flash models, which matters since that quota is a strict ~20/day cap.
+    model = genai.GenerativeModel("gemini-flash-lite-latest")
 
     prompt = f"""You are a blunt, experienced hiring manager reviewing a resume, not a hype machine.
 
