@@ -36,6 +36,18 @@ An intelligent, web-based application designed to help candidates evaluate and o
 **💡 Resume Optimization Suggestions**
   Provides actionable recommendations to improve alignment with target roles.
 
+**🏆 Auto-Match Mode**
+  Scores your resume against every predefined role at once and surfaces your best-fitting matches.
+
+**🩺 Resume Health Check**
+  Flags length, bullet-point usage, quantified achievements, action-verb strength, and contact completeness.
+
+**🎓 Certification Roadmap**
+  Suggests relevant certifications for each missing skill.
+
+**⬇️ Downloadable Report**
+  Export the full analysis — score, matched/missing skills, and health check — as a Markdown report.
+
 🛠️ Tech Stack
 * **Language:** Python 3.11
 * **Frontend / Interface:** Streamlit
@@ -48,8 +60,7 @@ resume-analyser/
 │
 ├── main.py
 ├── requirements.txt
-├── README.md
-└── utils/
+└── README.md
 
 ⚙️ Installation & Setup
 To run this project locally:

@@ -41,6 +41,25 @@ ROLE_CATEGORIES = {
     }
 }
 
+DEFAULT_SKILLS = [
+    "Python", "Java", "C++", "JavaScript", "React", "Node.js", "SQL", "Excel",
+    "AWS", "Docker", "Agile", "SEO", "Figma", "TensorFlow", "PyTorch", "Pandas",
+    "Git", "Linux", "TypeScript", "Kubernetes", "MongoDB", "PostgreSQL", "Flask",
+    "Django", "Machine Learning", "Deep Learning", "NLP", "Statistics", "Tableau",
+    "Power BI", "Swift", "Kotlin", "Flutter", "Scrum", "Leadership", "Communication",
+    "HTML", "CSS",
+]
+
+# Master skill vocabulary used to detect skills present in a resume: every skill
+# named anywhere in ROLE_CATEGORIES, plus the general defaults above. Without this,
+# skill detection would only ever look for the 35 default skills, so anything a
+# specific role needs (e.g. Terraform, Kafka, Jira) could never be found in a
+# resume even when it's clearly there, silently corrupting every match score.
+ALL_SKILLS = sorted(set(
+    DEFAULT_SKILLS
+    + [skill for roles in ROLE_CATEGORIES.values() for reqs in roles.values() for skill in reqs]
+))
+
 CERT_SUGGESTIONS = {
     "Python": "Python Institute PCEP/PCAP",
     "Machine Learning": "Google ML Crash Course / Coursera ML Specialization",
@@ -66,25 +85,38 @@ def extract_text_from_pdf(file_obj):
                 all_text += text + "\n"
     return all_text
 
+NAME_STOPWORDS = {
+    "curriculum vitae", "resume", "cv", "profile", "summary", "objective",
+    "contact", "personal details", "professional summary", "career objective",
+}
+
 def extract_contact_info(text):
     email = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)
     phone = re.findall(r'(?:(?:\+|0{0,2})91[\s-]?)?[6789]\d{9}', text)
-    name_match = re.search(r'^([A-Z][a-z]+ [A-Z][a-z]+)', text.strip(), re.MULTILINE)
+    if not phone:
+        phone = re.findall(r'(?:\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b', text)
+
+    name = "Candidate"
+    for line in text.strip().splitlines()[:8]:
+        line = line.strip()
+        if not line or line.lower() in NAME_STOPWORDS:
+            continue
+        if "@" in line or any(ch.isdigit() for ch in line):
+            continue
+        match = re.match(r'^([A-Z][a-zA-Z.\'-]+(?:\s+[A-Z][a-zA-Z.\'-]+){1,3})$', line)
+        if match and len(match.group(1)) <= 40:
+            name = match.group(1)
+            break
+
     return {
         "email": email[0] if email else "Not found",
         "phone": phone[0] if phone else "Not found",
-        "name": name_match.group(1) if name_match else "Candidate"
+        "name": name
     }
 
 def extract_skills(text, skill_list=None):
     if not skill_list:
-        skill_list = [
-            "Python", "Java", "C++", "JavaScript", "React", "Node.js", "SQL", "Excel",
-            "AWS", "Docker", "Agile", "SEO", "Figma", "TensorFlow", "PyTorch", "Pandas",
-            "Git", "Linux", "TypeScript", "Kubernetes", "MongoDB", "PostgreSQL", "Flask",
-            "Django", "Machine Learning", "Deep Learning", "NLP", "Statistics", "Tableau",
-            "Power BI", "Swift", "Kotlin", "Flutter", "Scrum", "Leadership", "Communication"
-        ]
+        skill_list = ALL_SKILLS
     matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
     patterns = [nlp.make_doc(skill) for skill in skill_list]
     matcher.add("SKILL_LIST", patterns)
@@ -93,12 +125,57 @@ def extract_skills(text, skill_list=None):
     return list(set([doc[start:end].text for _, start, end in matches]))
 
 def estimate_experience(text):
-    years = re.findall(r'(\d+)\+?\s*years?\s*(?:of\s+)?experience', text, re.IGNORECASE)
+    years = re.findall(r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s+)?experience', text, re.IGNORECASE)
     if years:
         return max(int(y) for y in years)
     # count job sections as a rough proxy
     jobs = len(re.findall(r'\b(20\d{2})\b', text))
     return min(jobs // 2, 10)
+
+ACTION_VERBS = [
+    "led", "built", "developed", "designed", "implemented", "created", "managed",
+    "launched", "improved", "increased", "reduced", "optimized", "architected",
+    "automated", "delivered", "drove", "spearheaded", "streamlined", "achieved",
+    "collaborated", "coordinated", "analyzed", "engineered", "deployed", "mentored",
+]
+
+def analyze_resume_quality(text):
+    words = re.findall(r'\b\w+\b', text)
+    word_count = len(words)
+    bullets = re.findall(r'(?m)^[\s]*[•▪●·\-\*]\s*(.+)$', text)
+    quantified = [b for b in bullets if re.search(r'\d', b)]
+    verb_bullets = [b for b in bullets if re.match(r'^\s*(?:\w+ed|\w+d)\b', b, re.IGNORECASE)
+                     or any(b.strip().lower().startswith(v) for v in ACTION_VERBS)]
+
+    checks = []
+    checks.append({
+        "label": "Resume length",
+        "passed": 200 <= word_count <= 1200,
+        "detail": f"{word_count} words — aim for roughly 300–800 for 1–2 pages."
+    })
+    checks.append({
+        "label": "Uses bullet points",
+        "passed": len(bullets) >= 3,
+        "detail": f"{len(bullets)} bullet points detected. Bullets are easier to scan than paragraphs."
+    })
+    checks.append({
+        "label": "Quantified achievements",
+        "passed": len(quantified) >= max(1, len(bullets) // 3),
+        "detail": f"{len(quantified)}/{len(bullets) or 0} bullets include numbers or metrics (e.g. \"cut load time by 30%\")."
+    })
+    checks.append({
+        "label": "Starts bullets with action verbs",
+        "passed": len(verb_bullets) >= max(1, len(bullets) // 2),
+        "detail": f"{len(verb_bullets)}/{len(bullets) or 0} bullets start with a strong action verb."
+    })
+    checks.append({
+        "label": "Has an email address",
+        "passed": bool(re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)),
+        "detail": "Recruiters need a way to reach you directly on the resume."
+    })
+
+    score = int(100 * sum(1 for c in checks if c["passed"]) / len(checks))
+    return {"score": score, "checks": checks, "word_count": word_count, "bullet_count": len(bullets)}
 
 def get_cert_suggestions(missing_skills):
     suggestions = {}
@@ -118,6 +195,44 @@ def get_best_role_matches(detected_skills):
             results.append({"role": role, "category": category, "score": score, "matched": len(matched), "total": len(required)})
     return sorted(results, key=lambda x: x["score"], reverse=True)[:5]
 
+def render_quality_section(quality):
+    st.markdown("---")
+    st.markdown('<div class="section-header">🩺 Resume Health Check</div>', unsafe_allow_html=True)
+    color = "#2ecc71" if quality["score"] >= 80 else "#ffa500" if quality["score"] >= 50 else "#e74c3c"
+    st.markdown(f"**Overall score: <span style='color:{color}'>{quality['score']}/100</span>**", unsafe_allow_html=True)
+    cols = st.columns(2)
+    for i, check in enumerate(quality["checks"]):
+        icon = "✅" if check["passed"] else "⚠️"
+        with cols[i % 2]:
+            st.markdown(f"""
+                <div class="health-card">
+                    <div style='font-weight:600; font-size:13px'>{icon} {check['label']}</div>
+                    <div style='font-size:12px; opacity:0.75; margin-top:2px'>{check['detail']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+def build_report_markdown(contact, exp_years, detected_skills, quality, selected_role=None, matched=None, missing=None, score=None):
+    lines = [f"# Resume Analysis Report — {contact['name']}", ""]
+    lines.append(f"- **Email:** {contact['email']}")
+    lines.append(f"- **Phone:** {contact['phone']}")
+    lines.append(f"- **Estimated experience:** {exp_years} year(s)")
+    lines.append("")
+    if selected_role and score is not None:
+        lines.append(f"## Match Score — {selected_role}: {score}%")
+        lines.append("")
+        lines.append(f"**Matched skills:** {', '.join(matched) if matched else 'None'}")
+        lines.append("")
+        lines.append(f"**Missing skills:** {', '.join(missing) if missing else 'None'}")
+        lines.append("")
+    lines.append(f"## Detected Skills ({len(detected_skills)})")
+    lines.append(", ".join(sorted(detected_skills)) or "None detected")
+    lines.append("")
+    lines.append(f"## Resume Health Check — {quality['score']}/100")
+    for check in quality["checks"]:
+        mark = "x" if check["passed"] else " "
+        lines.append(f"- [{mark}] {check['label']} — {check['detail']}")
+    return "\n".join(lines)
+
 # =====================
 # --- UI STARTS HERE ---
 # =====================
@@ -127,13 +242,6 @@ st.set_page_config(page_title="Resume Matcher Pro", layout="wide", page_icon="�
 # Custom CSS
 st.markdown("""
 <style>
-    .metric-card {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 16px 20px;
-        border-left: 4px solid #1f77b4;
-        margin-bottom: 12px;
-    }
     .skill-chip-green {
         display: inline-block;
         background: #d4edda;
@@ -166,7 +274,13 @@ st.markdown("""
         font-weight: 600;
         margin: 20px 0 10px 0;
         padding-bottom: 6px;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid rgba(128, 128, 128, 0.3);
+    }
+    .health-card {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        margin-bottom: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -209,9 +323,19 @@ uploaded_file = st.file_uploader("📄 Upload PDF Resume", type="pdf")
 
 if uploaded_file:
     content = extract_text_from_pdf(uploaded_file)
+
+    if len(content.strip()) < 50:
+        st.error(
+            "⚠️ Couldn't extract meaningful text from this PDF. It may be a scanned "
+            "image or a design-heavy resume without a real text layer. Try exporting "
+            "a text-based PDF (e.g. directly from Word/Google Docs) instead."
+        )
+        st.stop()
+
     contact = extract_contact_info(content)
     detected_skills = extract_skills(content)
     exp_years = estimate_experience(content)
+    quality = analyze_resume_quality(content)
 
     # ── TOP METRICS BAR ──
     st.markdown("---")
@@ -232,17 +356,19 @@ if uploaded_file:
             with cols[i]:
                 color = "#2ecc71" if match["score"] >= 70 else "#ffa500" if match["score"] >= 40 else "#e74c3c"
                 st.markdown(f"""
-                    <div style='text-align:center; padding:16px; border-radius:12px; border: 1px solid #dee2e6;'>
+                    <div style='text-align:center; padding:16px; border-radius:12px; border: 1px solid rgba(128,128,128,0.3);'>
                         <div style='font-size:28px; font-weight:700; color:{color}'>{match["score"]}%</div>
                         <div style='font-weight:600; font-size:14px'>{match["role"]}</div>
-                        <div style='color:#6c757d; font-size:12px'>{match["category"]}</div>
-                        <div style='color:#6c757d; font-size:12px'>{match["matched"]}/{match["total"]} skills</div>
+                        <div style='opacity:0.7; font-size:12px'>{match["category"]}</div>
+                        <div style='opacity:0.7; font-size:12px'>{match["matched"]}/{match["total"]} skills</div>
                     </div>
                 """, unsafe_allow_html=True)
-        
+
         st.markdown("#### 🛠 Your Detected Skills")
         chips = " ".join([f'<span class="skill-chip-blue">{s}</span>' for s in sorted(detected_skills)])
         st.markdown(chips, unsafe_allow_html=True)
+
+        render_quality_section(quality)
         st.stop()
 
     # ── ROLE-BASED / CUSTOM JD ──
@@ -322,7 +448,7 @@ if uploaded_file:
                 for i, (skill, cert) in enumerate(certs.items()):
                     with cols[i % 3]:
                         st.markdown(f"""
-                            <div style='padding:12px; border-radius:10px; border:1px solid #dee2e6; margin-bottom:8px;'>
+                            <div class="health-card">
                                 <div style='font-weight:600; color:#e74c3c; font-size:13px'>Missing: {skill}</div>
                                 <div style='font-size:13px; margin-top:4px'>📜 {cert}</div>
                             </div>
@@ -330,10 +456,25 @@ if uploaded_file:
             else:
                 st.info("No specific certifications mapped for missing skills.")
 
-        # ── RAW TEXT ──
+        render_quality_section(quality)
+
+        # ── DOWNLOAD REPORT ──
         st.markdown("---")
+        report = build_report_markdown(contact, exp_years, detected_skills, quality, selected_role, matched, missing, score)
+        st.download_button(
+            "⬇️ Download Analysis Report (Markdown)",
+            data=report,
+            file_name=f"{contact['name'].replace(' ', '_')}_resume_report.md",
+            mime="text/markdown",
+        )
+
+        # ── RAW TEXT ──
         with st.expander("📄 View Extracted Resume Text"):
             st.text_area("Raw Content", content, height=300)
+
+    else:
+        st.warning("No target skills to compare against yet. Pick a role or paste a job description in the sidebar.")
+        render_quality_section(quality)
 
 else:
     st.info("👆 Upload a PDF resume to get started.")
